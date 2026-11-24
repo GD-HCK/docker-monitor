@@ -1,0 +1,41 @@
+name: Bug report
+description: Something doesn't work or looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead. A screenshot helps a lot.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Docker Monitor version
+      description: Output of `docker-monitor --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux, Other]
+    validations:
+      required: true
+  - type: input
+    id: docker
+    attributes:
+      label: Docker version
+      description: Output of `docker version --format '{{.Server.Version}}'`
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: e.g. Windows Terminal, iTerm2, Ghostty, GNOME Terminal
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: Any traceback or error text. Please remove anything private (container names, hosts, secrets).
+      render: text

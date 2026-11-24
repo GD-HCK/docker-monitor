@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.x'
+      - run: pip install ruff
+      - run: ruff check --output-format=github .
+      - run: ruff format --check .
+      - name: ShellCheck install.sh
+        run: shellcheck install.sh
+      - name: PSScriptAnalyzer install.ps1
+        shell: pwsh
+        run: |
+          $issues = Invoke-ScriptAnalyzer -Path install.ps1 -Severity Warning,Error -ExcludeRule PSAvoidUsingWriteHost
+          $issues | Format-Table -AutoSize
+          if ($issues) { throw "PSScriptAnalyzer found $($issues.Count) issue(s)" }
+
+  test:
+    name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.10', '3.x']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      # Linux runners have a Docker engine, so the end-to-end tests run there;
+      # elsewhere they're skipped and only the unit tests run.
+      - run: pytest -v
+
+  install:
+    name: Installer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.x'
+      - name: Install from this checkout (macOS / Linux)
+        if: runner.os != 'Windows'
+        env:
+          DOCKER_MONITOR_SOURCE: ${{ github.workspace }}
+        run: |
+          sh install.sh
+          "$HOME/.local/bin/docker-monitor" --version || docker-monitor --version
+          sh install.sh --uninstall
+      - name: Install from this checkout (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          DOCKER_MONITOR_SOURCE: ${{ github.workspace }}
+        run: |
+          ./install.ps1
+          docker-monitor --version
+          if ($LASTEXITCODE -ne 0) { throw 'docker-monitor --version failed' }
+          ./install.ps1 -Uninstall

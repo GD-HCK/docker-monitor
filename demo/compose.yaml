@@ -1,0 +1,73 @@
+# A small demo stack to try Docker Monitor against (and to take the README screenshots).
+# It deliberately includes a busy service, an unhealthy one and a failed job, so every
+# colour in the dashboard shows up.
+#
+#   docker compose -f demo/compose.yaml up -d
+#   docker-monitor
+#   docker compose -f demo/compose.yaml down
+name: demo-shop
+
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:8088:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      retries: 3
+
+  api:
+    image: alpine:3
+    # Burns a little CPU and writes log lines at every level, to show the log colours.
+    command:
+      - sh
+      - -c
+      - |
+        n=0
+        while true; do
+          n=$$((n + 1)); i=0
+          while [ $$i -lt 40000 ]; do i=$$((i + 1)); done
+          echo "$$(date -u +%FT%TZ) INFO  GET /api/orders/$$n 200 12ms"
+          [ $$((n % 5)) -eq 0 ] && echo "$$(date -u +%FT%TZ) WARN  slow query on orders ($$((n * 7))ms)"
+          [ $$((n % 13)) -eq 0 ] && echo "$$(date -u +%FT%TZ) ERROR payment provider timeout, retrying"
+          sleep 1
+        done
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+
+  cache:
+    image: redis:alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      # Demo only: no password, reachable from the compose network alone.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  search:
+    image: alpine:3
+    command: ["sleep", "infinity"]
+    # Always fails, so the dashboard has an unhealthy container to show.
+    healthcheck:
+      test: ["CMD", "false"]
+      interval: 3s
+      retries: 1
+
+  migrate:
+    image: alpine:3
+    # A one-shot job that fails, to show an exited container.
+    command: ["sh", "-c", "echo 'ERROR migration 0042 failed: column already exists'; exit 1"]
+    restart: "no"
+
+volumes:
+  db-data:

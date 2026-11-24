@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage and keys
+    url: https://github.com/GD-HCK/docker-monitor#usage
+    about: Check the keys and options in the README first.

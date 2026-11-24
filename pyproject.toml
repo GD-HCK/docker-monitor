@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docker-monitor"
+version = "0.1.0"
+description = "A colourful, interactive k9s-style terminal dashboard for your local Docker stack."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["textual>=8.2,<9"]
+keywords = ["docker", "docker-compose", "tui", "terminal", "dashboard", "monitoring", "textual"]
+classifiers = [
+    "Environment :: Console :: Curses",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Monitoring",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.8"]
+
+[project.scripts]
+docker-monitor = "docker_monitor:main"
+
+[project.urls]
+Homepage = "https://github.com/GD-HCK/docker-monitor"
+Issues = "https://github.com/GD-HCK/docker-monitor/issues"
+
+[tool.setuptools]
+py-modules = ["docker_monitor"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "S"]
+# S603/S607: running the docker CLI by name is the whole point of this tool.
+# S101: asserts are fine in tests.
+ignore = ["S603", "S607", "UP037"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
