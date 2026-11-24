@@ -10,15 +10,15 @@ import pytest
 import docker_monitor as dm
 
 
-def docker_available() -> bool:
+def linux_engine_available() -> bool:
+    # The tests run a Linux image, so a Windows-containers engine (e.g. GitHub's Windows runners) can't host them.
     try:
-        dm.docker('version', '--format', '{{.Server.Version}}', timeout=10)
-        return True
+        return dm.docker('version', '--format', '{{.Server.Os}}', timeout=10).strip() == 'linux'
     except dm.DockerError:
         return False
 
 
-pytestmark = pytest.mark.skipif(not docker_available(), reason='no Docker engine reachable')
+pytestmark = pytest.mark.skipif(not linux_engine_available(), reason='no Linux Docker engine reachable')
 
 
 @pytest.fixture(scope='module')
